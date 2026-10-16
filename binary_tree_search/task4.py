@@ -1,62 +1,64 @@
-from __future__ import annotations
-
 import sys
-from dataclasses import dataclass
 
 
-@dataclass
 class AvlNode:
-    key: int
-    left: AvlNode | None = None
-    right: AvlNode | None = None
-    height: int = 0
+    def __init__(self, key):
+        self.key = key
+        self.left = None
+        self.right = None
+        self.height = 0
 
 
 class AVL:
-    def __init__(self) -> None:
-        self.root: AvlNode | None = None
+    def __init__(self):
+        self.root = None
 
-    def height_node(self, node: AvlNode | None) -> int:
+    def height_node(self, node):
         return -1 if node is None else node.height
 
-    def update(self, node: AvlNode) -> None:
+    def update(self, node):
         node.height = 1 + max(self.height_node(node.left), self.height_node(node.right))
 
-    def balance_factor(self, node: AvlNode) -> int:
-        return self.height_node(node.left) - self.height_node(node.right)
+    def balance_factor(self, node):
+        return self.height_node(node.right) - self.height_node(node.left)
 
-    def rotate_right(self, y: AvlNode) -> AvlNode:
+    def rotate_right(self, y):
         x = y.left
-        assert x is not None
         y.left = x.right
         x.right = y
         self.update(y)
         self.update(x)
         return x
 
-    def rotate_left(self, x: AvlNode) -> AvlNode:
+    def rotate_left(self, x):
         y = x.right
-        assert y is not None
         x.right = y.left
         y.left = x
         self.update(x)
         self.update(y)
         return y
 
-    def rebalance(self, node: AvlNode) -> AvlNode:
+    def rebalance(self, node):
         self.update(node)
         bf = self.balance_factor(node)
+        
         if bf > 1:
-            if self.balance_factor(node.left) < 0:
-                node.left = self.rotate_left(node.left)
-            return self.rotate_right(node)
-        if bf < -1:
-            if self.balance_factor(node.right) > 0:
+            if self.balance_factor(node.right) >= 0:
+                return self.rotate_left(node)
+            else:
                 node.right = self.rotate_right(node.right)
-            return self.rotate_left(node)
+                return self.rotate_left(node)
+        
+        if bf < -1:
+            if self.balance_factor(node.left) <= 0:
+                return self.rotate_right(node)
+            else:
+                node.left = self.rotate_left(node.left)
+                return self.rotate_right(node)
+        
         return node
 
-    def avl_insert(self, root: AvlNode | None, key: int) -> AvlNode:
+    def avl_insert(self, root, key):
         if root is None:
             return AvlNode(key)
         if key == root.key:
@@ -67,13 +69,13 @@ class AVL:
             root.right = self.avl_insert(root.right, key)
         return self.rebalance(root)
 
-    def find_min(self, root: AvlNode) -> AvlNode:
+    def find_min(self, root):
         current = root
         while current.left is not None:
             current = current.left
         return current
 
-    def avl_delete(self, root: AvlNode | None, key: int) -> AvlNode | None:
+    def avl_delete(self, root, key):
         if root is None:
             return None
         if key < root.key:
@@ -92,13 +94,13 @@ class AVL:
             root.right = self.avl_delete(root.right, succ.key)
         return self.rebalance(root)
 
-    def add(self, key: int) -> None:
+    def add(self, key):
         self.root = self.avl_insert(self.root, key)
 
-    def delete(self, key: int) -> None:
+    def delete(self, key):
         self.root = self.avl_delete(self.root, key)
 
-    def exists(self, key: int) -> bool:
+    def exists(self, key):
         current = self.root
         while current is not None:
             if key == current.key:
@@ -106,7 +108,7 @@ class AVL:
             current = current.left if key < current.key else current.right
         return False
 
-    def next_key(self, x: int) -> int | None:
+    def next_key(self, x):
         current = self.root
         answer = None
         while current is not None:
@@ -117,7 +119,7 @@ class AVL:
                 current = current.right
         return answer
 
-    def prev_key(self, x: int) -> int | None:
+    def prev_key(self, x):
         current = self.root
         answer = None
         while current is not None:
@@ -128,33 +130,32 @@ class AVL:
                 current = current.left
         return answer
 
-    def root_key(self) -> str:
+    def root_key(self):
         return 'Empty' if self.root is None else str(self.root.key)
 
-    def tree_height(self) -> int:
+    def tree_height(self):
         return self.height_node(self.root) + 1
 
-    def preorder(self) -> str:
+    def preorder(self):
         if self.root is None:
             return 'Empty'
         keys = []
-        stack = [self.root]
-        while stack:
-            node = stack.pop()
-            keys.append(str(node.key))
-            if node.right is not None:
-                stack.append(node.right)
-            if node.left is not None:
-                stack.append(node.left)
-        return " ".join(keys)
+        def traverse(node):
+            if node is not None:
+                keys.append(str(node.key))
+                traverse(node.left)
+                traverse(node.right)
+        traverse(self.root)
+        return ' '.join(keys)
 
 
-def main() -> None:
-    sys.setrecursionlimit(5000)
-    lines = sys.stdin.read().split('\n')
+def main():
+    sys.setrecursionlimit(200000)
+    input_data = sys.stdin.read().split('\n')
+    q = int(input_data[0])
     tree = AVL()
     result_f = []
-    for line in lines[1:int(lines[0]) + 1]:
+    for line in input_data[1:q + 1]:
         cmd = line.split()
         if not cmd:
             continue
@@ -163,11 +164,13 @@ def main() -> None:
         elif cmd[0] == 'del':
             tree.delete(int(cmd[1]))
         elif cmd[0] == 'exists':
-            result_f.append('YES' if tree.exists(int(cmd[1])) else "NO")
+            result_f.append('YES' if tree.exists(int(cmd[1])) else 'NO')
         elif cmd[0] == 'next':
-            result_f.append(str(tree.next_key(int(cmd[1]))))
+            result = tree.next_key(int(cmd[1]))
+            result_f.append(str(result) if result is not None else 'None')
         elif cmd[0] == 'prev':
-            result_f.append(str(tree.prev_key(int(cmd[1]))))
+            result = tree.prev_key(int(cmd[1]))
+            result_f.append(str(result) if result is not None else 'None')
         elif cmd[0] == 'root':
             result_f.append(tree.root_key())
         elif cmd[0] == 'height':
